@@ -1,0 +1,117 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{subfigure}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=3.5cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\bm}[1]{\mbox{\boldmath $ #1 $}}    % bold math mode
+
+
+\title{HPC Homework 2}
+\author{Ondrej Maxian}
+
+\begin{document}
+\maketitle
+
+\section*{Timings for Problem 2}
+
+\subsection*{Re-ordering the loops}
+We have three loops for $C=A \times B$. There is an $i$ loop that loops over the rows of $A$ and $C$, a $j$ loop that loops over the columns of $B$ and $C$, and a $p$ loop that loops over the columns of $A$ and rows of $B$. We notice the arrays are accessed by \texttt{a[i+p*m]},  \texttt{b[p+j*k]},  \texttt{c[i+j*m]}. To get the best performace, we want to access the arrays as sequentially as possible. We can do this by making $i$ the inner loop so that $A$ and $C$ are accessed sequentially. The next outer loop should be $p$, so that $B$ is accessed sequentially also. Table \ref{tab:looporders} confirms that for representative aquare matrix sizes, $n=64, 640, 1312$, the fastest loop is $j,p,i$. The slowest loops are when $i$ and $p$ are the two outer loops, also as expected. 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{c|c|c|c} 
+Ordering & $n=64$ time & $n=640$ time & $n=1312$ time \\[2 pt] \hline
+$j,p,i$ & 0.26 & 0.38 & 1.77 \\[2 pt]
+$p,j,i$ & 0.28 & 0.38 & 2.32 \\[2 pt]
+$j,i,p$ & 0.86 & 1.83 & 5.59 \\[2 pt]
+$i,j,p$ & 0.90 & 2.47 & 5.28 \\[2 pt]
+$i,p,j$ & 0.91 & 5.67 & 26.7 \\[2 pt]
+$p,i,j$ & 0.94 & 5.76 & 26.6
+\end{tabular}
+\caption{Timings for various loop orderings. $j,p,i$ means $j$ is the outermost loop, $i$ the innermost loop, etc.}
+\label{tab:looporders}
+\end{table}
+
+\subsection*{Effect of blocking}
+I next consider the effect of blocking and running the blocked code with various block sizes. The speed-up is the time to multiply the matrices without blocking divided by the time to multiply them with blocking. Results are shown in Table \ref{tab:blockspeeds}. 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{c|c|c|c} 
+Block Size & $n=64$ su & $n=448$ su & $n=1984$ su \\[2 pt] \hline
+16 & 0.72 & 0.77 & 2.00 \\[2 pt]
+32 & 0.96 & 0.95 & 2.43 \\[2 pt]
+64 & 1.27 & 1.35 & 2.97 \\[2 pt]
+96 & -& 1.15 ($n=480$) & 2.77 ($n=1920$)\\[2 pt]
+\end{tabular}
+\caption{Speed-ups (su) for various block and matrix sizes. The speed-up is the time to multiply the matrices without blocking divided by the time to multiply them with blocking.}
+\label{tab:blockspeeds}
+\end{table}
+We observe that the block size of 64 appears to be optimal, although the results might be slightly unreliable given a speed-up is reported for $n=64$ using a 64 block size (this should be equivalent to just doing the regular multiplication). This could be due to noise and other background processes. That said, it is clear that a block size of 64 outperforms the block sizes of 16, 32, and 96. For the block size of 96, different $n$ values are used because $n=64, 448, 1984$ are not divisible by 96. Yet similar sized matrices still perform worse with respect to speed up than with a block size of 64. 
+
+\subsection*{Parallelization}
+In this section, I fix the block size at 64 and consider the effect of parallelization. This was done simply by making the loop over the $i$ blocks parallel. After experimentation, I found that 8 threads gave the fastest results. Using the time to multiply the matrices, the number of flops per second was computed from \newline \#flops $=N_R(2n^3+n^2)/t$, where $t$ is the measured time, $N_R$ is the number of times the multiplication is repeated, and $n$ is the matrix size. 
+
+I am running the code on the CIMS computer, which has an Intel Core i7-6700 processor with 4 cores and a max turbo frequency of 4 GHz. Using the fact from google that this processor can do 4 double operations per clock cycle, we get a maximum theoretical flop rate of 64 Gflops/s. 
+
+Table \ref{tab:parallelspeeds} shows the performance of the parallel code. The speed-up is the time to run the multiplication code (for matrices of size $n \times n$) with blocks divided by the time to run the same code in parallel. We see a factor of 2-3 for large matrices, while smaller matrices (e.g. $n=64$) give poor performance in parallel as expected. We see that for $n=64$, we are still at about a third of the theoretical maximum flop rate. This could be due to the simplified calculation for number of flops or (more likely) the fact that we are still memory-bound. 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{c|c|c}
+$n$ & Parallelization Speed-up& Gflops/s\\[2 pt] \hline
+64 & 0.41 & 3.5\\[2 pt]
+384 & 1.70 & 12.1\\[2 pt]
+768 & 2.47 & 16.5\\[2 pt]
+1984 & 3.25 & 22.0
+\end{tabular}
+\caption{Speed-ups from parallelization for a block size of 64 with various matrix sizes $n$.}
+\label{tab:parallelspeeds}
+\end{table}
+
+%The full list of timings is in the spreadsheet \texttt{MMultTimings.xlsx}. 
+
+\section*{Timings for problem 4}
+Here I report timings for the OpenMP Jacobi and Gauss-Seidel algorithms. For all cases, 1000 iterations are performed and the timings are in seconds. In all cases, the time scales as $N^2$, since there are $N^2$ points in the lattice to loop over. 
+
+Table \ref{tab:jacobispeeds} shows the timings for the Jacobi algorithm. We see optimal speed is achieved at 4 threads, even though the time per thread is still best at 1 thread. 
+
+Table \ref{tab:gsspeeds} shows the timings for the Gauss-Seidel algorithm. This time, optimal speed is achieved for 2 threads, and the time per thread is still optimal for 1 thread. 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{c|c|c|c|c}
+$N$ & 1 Thread& 2 Threads & 4 Threads & 8 Threads\\[2 pt] \hline
+100 & 3.71e-2 & 2.58e-2 & 2.48e-2 & 1.15e-1\\[2 pt]
+1,000 & 3.55 & 2.58 & 2.42 &  2.68\\[2 pt]
+10,000 &3.99e2 & 2.98e2 & 2.80e2  & 2.95e2
+\end{tabular}
+\caption{Timings for parallelized Jacobi algorithm. }
+\label{tab:jacobispeeds}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{c|c|c|c|c}
+$N$ & 1 Thread& 2 Threads & 4 Threads \\[2 pt] \hline
+100 & 4.12e-2 & 3.42e-2 & 4.17e-2\\[2 pt]
+1,000 & 4.17 & 2.81 & 15.5 \\[2 pt]
+10,000 &4.61e2 & 3.45e2 & 3.54e2
+\end{tabular}
+\caption{Timings for parallelized Gauss-Seidel algorithm.}
+\label{tab:gsspeeds}
+\end{table}
+
+
+\end{document}
