@@ -1,0 +1,66 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{subfigure}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=3.5cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\bm}[1]{\mbox{\boldmath $ #1 $}}    % bold math mode
+
+
+\title{HPC Homework 3}
+\author{Ondrej Maxian}
+
+\begin{document}
+\maketitle
+
+\section{Approximating special functions}
+\textbf{Extra credit.} Consider an angle $\theta$ in radians. We write $\displaystyle \theta = x_1 - n\frac{\pi}{2}$, where $\displaystyle x_1 \in \left[-\frac{\pi}{4},\frac{\pi}{4}\right]$. Table \ref{tab:sintrick} shows how we can make use of symmetries to determine $\sin{\theta}$ using the rapidly converging Taylor series representations of $\sin{x_1}$ and $\cos{x_1}$. 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{c|c}
+$n$ (mod 4) & $\sin{\theta}$\\[2 pt] \hline
+0 & $\sin{x_1}$ \\[2 pt]
+1 & $\cos{x_1}$\\[2 pt]
+2 & $-\sin{x_1}$\\[2 pt]
+3 & $-\cos{x_1}$ 
+\end{tabular}
+\caption{Values of $\sin{\theta}$ in terms of $x_1$}
+\label{tab:sintrick}
+\end{table}
+
+Let $z = \lfloor{\frac{n}{2}}\rfloor$. Then Table \ref{tab:sintrick} can be written concisely as
+\begin{equation}
+\sin{\theta} = (-1)^z (n+1 \textrm{ mod } 2)\sin{x_1} + (-1)^z  (n \textrm{ mod } 2)\cos{x_1}. 
+\end{equation}
+This function has been implemented in the methods \texttt{sin4\_taylor} and \texttt{sin4\_vec}. For $10^6$ values of $\theta \in [-\pi,\pi]$, the function \texttt{sin4\_taylor} takes about 80\% of the time of the built in function, and \texttt{sin4\_vec} takes 20\% of the time, an incredible speed-up. 
+
+\section{Parallel scan in OpenMP}
+I have parallelized the serial code and am running it on the CIMS computer, which has an Intel Core i7-6700 processor with 4 cores. The array has size $10^8$. Timings are reported in Table \ref{tab:omptime}. We see that the optimal number of threads is the same as the number of cores. 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{c|c}
+\# Threads & Time\\[2 pt] \hline
+Serial & 0.371 \\[2 pt]
+2 & 0.279 \\[2 pt]
+4 & 0.181\\[2 pt]
+6 & 0.189\\[2 pt]
+8 & 0.192 
+\end{tabular}
+\caption{Timings for parallelized scan.}
+\label{tab:omptime}
+\end{table}
+
+
+\end{document}
