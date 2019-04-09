@@ -42,14 +42,14 @@ void Jacobi( long N, double *u, double *f, int maxiters) {
    //t1.tic();
    # pragma omp parallel shared(ukp1,u,hsq,N,f) 
    { // start parallel region
-   # pragma omp for nowait
+   # pragma omp for
    for (long j = 1; j <= N; j++) {
     for (long i = 1; i <= N; i++) {
 	 ukp1[(N+2)*j+i]=0.25*(hsq*f[(N+2)*j+i]+u[(N+2)*j+i-1]+u[(N+2)*(j-1)+i]
 		+u[(N+2)*j+i+1]+u[(N+2)*(j+1)+i]);
     }
    }
-   # pragma omp for nowait
+   # pragma omp for
    for (long j = 1; j <= N; j++) {
     for (long i = 1; i <= N; i++) {
 	 u[(N+2)*j+i]=ukp1[(N+2)*j+i];
