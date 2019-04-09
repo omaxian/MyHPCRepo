@@ -1,0 +1,79 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{subfigure}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=3.5cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\bm}[1]{\mbox{\boldmath $ #1 $}}    % bold math mode
+
+
+\title{HPC Homework 4}
+\author{Ondrej Maxian}
+
+\begin{document}
+\maketitle
+For the CPU timings in this assignment, I am using the CIMS computer, which has an Intel Core i7-6700 processor with 4 cores. 
+\section{Matrix-vector multiplication}
+For the first problem, I perform matrix-vector multiplication using the three different CIMS GPUs, cuda1 (``GPU1''), cuda4 (``GPU4'') and cuda5 (``GPU5''). According to the CIMS website, cuda4 supports up to cuda 6.5 while  cuda1 and cuda5 support up to cuda 8. 
+
+The problem set-up is as follows: fill an $N \times N$ matrix and an $N$ vector with random numbers, and use the GPU to compute their product (comparing to the CPU to ensure correctness). The chief memory cost of this operation is $3N+N^2$. As such, the memory bandwidth is $$\frac{(3N+N^2)(\texttt{sizeof(double)})}{\textrm{time to compute matrix vector product}}.$$
+
+Table \ref{tab:mvtime} shows the memory bandwidth in GB/s on the 3 GPUs. We observe that GPU4 is the fastest in all cases. In addition, for $N=10000$ the GPU operates at about half its maximum bandwidth of $\sim 600$ GB/s. 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{c|c|c|c}
+$N$ & GPU1 & GPU4 & GPU5\\[2 pt] \hline
+100 & 0.03 & 0.76 & 0.39  \\[2 pt]
+1000 & 11.3 & 58.0 & 24.0 \\[2 pt]
+10000 & 167.8 & 265.9 & 134.8
+\end{tabular}
+\caption{Matrix-vector bandwidth in GB/s on GPU1, GPU4, and GPU5}
+\label{tab:mvtime}
+\end{table}
+
+\section{2D Iterative methods}
+I have implemented both the 2D Jacobi and Gauss-Seidel iterative algorithms from HW2 on a GPU. The smoothers are done on an $N \times N$ grid, so that the number of entries in the array \texttt{u} is $\mathcal{O}(N^2)$. I compare the GPU code to a CPU code which is parallelized with OpenMP. Output shows the CPU and GPU have the same residual and end result for both Jacobi and Gauss-Seidel smoothing. 
+
+Table \ref{tab:jactime} shows the time needed to perform 1000 iterations of Jacobi on the CPU and on various GPUs. We see that, for small problem sizes, the CPU and GPU are comparable. However, this is really irrelevant since the GPU is used in practice for large problems. For the largest problem, $N=5000$, GPU4 and GPU5 give comparable performance, while GPU1 lags behind. These trends are similar to those discovered in computing matrix-vector products. 
+
+Table \ref{tab:gstime} shows that the trends are similar for Gauss-Seidel smoothing. We also notice that the two algorithms have comparable cost on all of the GPUs. 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{c|c|c|c|c}
+$N$ & CPU & GPU1 & GPU4 & GPU5\\[2 pt] \hline
+50 & 0.09 & 1.14 & 0.36 & 0.06 \\[2 pt]
+250 & 0.22 & 2.71 & 0.10 & 0.09 \\[2 pt]
+1250 & 3.92 & 5.23 & 0.80 &0.79 \\[2 pt]
+5000 & 82.8 & 30.5 & 12.2 & 10.6
+\end{tabular}
+\caption{Time for 1000 iterations of Jacobi smoothing for various $N$ and GPUs. }
+\label{tab:jactime}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{c|c|c|c|c}
+$N$ & CPU & GPU1 & GPU4 & GPU5\\[2 pt] \hline
+50 & 0.08 & 2.81 & 0.08 & 0.07 \\[2 pt]
+250 & 0.18 & 3.83 & 0.14 & 0.11 \\[2 pt]
+1250 & 3.47 & 7.62 & 0.82 & 0.86 \\[2 pt]
+5000 & 91.3 & 38.8 & 11.3 & 11.8
+\end{tabular}
+\caption{Time for 1000 iterations of Gauss-Seidel smoothing for various $N$ and GPUs. }
+\label{tab:gstime}
+\end{table}
+
+
+\end{document}
