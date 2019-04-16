@@ -1,0 +1,6 @@
+For my final project, I will work with Tristan and Anthony to develop a parallel IB method. To start, we can restrict to
+Stokes flow so that the fluid solve can be done with parallel FFTs (we will call a library to handle this).
+The IB method takes a structure with a set of points and forces, spreads the forces to the underlying fluid grid, 
+solves the fluid equations on the grid, and then interpolates the result back to the structures. Interpolation
+is embarassingly parallel. Spreading is more difficult, and will require some thought about how to do efficiently in
+parallel. 
