@@ -1,0 +1,68 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{subfigure}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=3.5cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\bm}[1]{\mbox{\boldmath $ #1 $}}    % bold math mode
+
+
+\title{HPC Homework 5}
+\author{Ondrej Maxian}
+
+\begin{document}
+\maketitle
+\section{MPI ring communication}
+I have written a distributed memory program based on \texttt{pingpong.cpp}, called \texttt{int\_ring.cpp}, which sends an integer in a ring starting from process 0 to $M$, and then back to 0. The process is performed $MN$ times, so that if each processor adds its rank to the number, the final sum should be $N(M-1)(M/2)$.
+
+Let $t$ be the time needed to perform the communication $MN$ times. The latency of the communication is then simply $t/MN$. For an array of size 2.0 MB, the bandwidth can be estimated by $MN*(2.0$ MB$)/t$. For this assignment, I will fix $N=1000$. 
+
+Table \ref{tab:t} shows the latency and bandwidth of communication on 2, 4, and 8 processors for 2 different machines. The first two columns show the latency and bandwidth on my local machine. We see a relatively consistent result for 2, 4 cores. Once I try to run with 8 processors (which is double the number of cores my machine has), I see a slowdown. The latency increases by a factor of 10 and the bandwidth drops by 50\%. 
+
+This bandwidth is still faster than crunchy5, which communicates through the network. On my machine, the memory is local and divided into chunks by MPI, so communication is relatively quick. The last two columns show that communication is much slower on crunchy5. We notice that the latency for 2 and 4 processors is about 5 times longer than for my local machine. Additionally, the bandwidth, while consistent across the number of cores used, is much lower. We see about 2 GB/s. 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{c|c|c|c|c}
+Processors & LL (ms) & LB (GB/s) & NLL (ms) & NLB (GB/s)\\[2 pt] \hline
+2 & 2e-4 & 14.2 & 9e-4  & 2.1\\[2 pt]
+4 & 2e-4 & 12.8 & 1e-3 & 2.0 \\[2 pt]
+8 & 2e-3 & 8.0 & 2e-3 & 1.7
+\end{tabular}
+\caption{Latency (L, ms) and bandwidth (B, GB/s) for communication on my machine (L, box743) and on crunchy5 (NL). }
+\label{tab:t}
+\end{table}
+
+\section{Project}
+I (OM) will work with Tristan Goodwill (TG) and Anthony Trubiano (AT) on a parallel implementation of the immersed boundary (IB) method. Below is a description
+
+  \begin{center}
+  \begin{tabular} {|c|p{9cm}|p{2cm}|}
+    \hline
+    \multicolumn{3}{|c|}{\bf Project: A parallel implementation of the IB method} \\
+    \hline
+    Week & Work & Who  \\ \hline \hline
+    04/15-04/21 & Think about
+    algorithm. How to do spread in parallel? OpenMP or MPI? Which FFT library to use? &  AT, TG, OM \\ \hline
+    04/22-04/28 & Write OpenMP version of spread and interpolate & OM \\ \hline
+    04/22-04/28 & Research OpenMP, MPI FFTW algorithms & TG, AT \\ \hline
+    04/29-05/05 & Write parallel fluid solver & TG, AT \\ \hline
+    04/29-05/05 & Write C++ initialization routines, force calculation & OM \\ \hline
+    05/06-05/12 & Finish implementation, think about possible GPU or MPI implementation of spread and interpolate & AT, TG, OM \\ \hline
+    05/13-05/19 & Run scalability tests, work on
+    presentation slides and report  & TG, AT, OM \\ \hline
+  \end{tabular}
+  \end{center}
+
+
+\end{document}
