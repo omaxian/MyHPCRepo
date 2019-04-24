@@ -29,17 +29,17 @@ Let $t$ be the time needed to perform the communication $MN$ times. The latency 
 
 Table \ref{tab:t} shows the latency and bandwidth of communication on 2, 4, and 8 processors for 2 different machines. The first two columns show the latency and bandwidth on my local machine. We see a relatively consistent result for 2, 4 cores. Once I try to run with 8 processors (which is double the number of cores my machine has), I see a slowdown. The latency increases by a factor of 10 and the bandwidth drops by 50\%. 
 
-This bandwidth is still faster than crunchy5, which communicates through the network. On my machine, the memory is local and divided into chunks by MPI, so communication is relatively quick. The last two columns show that communication is much slower on crunchy5. We notice that the latency for 2 and 4 processors is about 5 times longer than for my local machine. Additionally, the bandwidth, while consistent across the number of cores used, is much lower. We see about 2 GB/s. 
+This bandwidth is still much faster than going through the network. On my machine, the memory is local and divided into chunks by MPI, so communication is relatively quick. The last two columns show that communication is much slower on a combination of crackle1 and crackle2. I did this by ssh-ing into crackle2 and then running \texttt{mpirun -np 4 --oversubscribe -H crackle2, crackle1 ./int\_ring}. We notice that the latency is about 100 times longer than for my local machine, and that it drops with the number of cores used. The bandwidth increases with the number of cores used. Despite this, it is also 10-100 times lower than the bandwidth on my local machine. 
 
 \begin{table}[ht]
 \centering
 \begin{tabular}{c|c|c|c|c}
 Processors & LL (ms) & LB (GB/s) & NLL (ms) & NLB (GB/s)\\[2 pt] \hline
-2 & 2e-4 & 14.2 & 9e-4  & 2.1\\[2 pt]
-4 & 2e-4 & 12.8 & 1e-3 & 2.0 \\[2 pt]
-8 & 2e-3 & 8.0 & 2e-3 & 1.7
+2 & 2e-4 & 14.2 & 6.8e-2  & 0.12 \\[2 pt]
+4 & 2e-4 & 12.8 & 4e-2 & 0.23 \\[2 pt]
+8 & 2e-3 & 8.0 & 1.7e-2 & 0.43
 \end{tabular}
-\caption{Latency (L, ms) and bandwidth (B, GB/s) for communication on my machine (L, box743) and on crunchy5 (NL). }
+\caption{Latency (L, ms) and bandwidth (B, GB/s) for communication on my machine (L, box743) and on crackle1/crackle2 (NL, through the network). }
 \label{tab:t}
 \end{table}
 
