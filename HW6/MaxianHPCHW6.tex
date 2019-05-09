@@ -1,0 +1,85 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{subfigure}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=3.5cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\bm}[1]{\mbox{\boldmath $ #1 $}}    % bold math mode
+
+
+\title{HPC Homework 6}
+\author{Ondrej Maxian}
+
+\begin{document}
+\maketitle
+
+\section*{Project}
+The table below is from HW 5. 
+
+  \begin{center}
+  \begin{tabular} {|c|p{9cm}|p{2cm}|}
+    \hline
+    \multicolumn{3}{|c|}{\bf Project: A parallel implementation of the IB method} \\
+    \hline
+    Week & Work & Who  \\ \hline \hline
+    04/15-04/21 & Think about
+    algorithm. How to do spread in parallel? OpenMP or MPI? Which FFT library to use? &  AT, TG, OM \\ \hline
+    04/22-04/28 & Write OpenMP version of spread and interpolate & OM \\ \hline
+    04/22-04/28 & Research OpenMP, MPI FFTW algorithms & TG, AT \\ \hline
+    04/29-05/05 & Write parallel fluid solver & TG, AT \\ \hline
+    04/29-05/05 & Write C++ initialization routines, force calculation & OM \\ \hline
+    05/06-05/12 & Finish implementation, think about possible GPU or MPI implementation of spread and interpolate & AT, TG, OM \\ \hline
+    05/13-05/19 & Run strong/weak scaling tests, write presentation and report  & TG, AT, OM \\ \hline
+  \end{tabular}
+  \end{center}
+
+So far, we are on schedule, as we have completed the C++ \textit{shared} memory (OpenMP) implementation of the IB method in 3D. We had some issues compiling FFTW for distributed memory, so we have spent some of this week getting that figured out. Our plan now is to run strong/weak scaling tests and timings. We need to figure out where the majority of the time is spent in the code. If it is in the spread/interpolate routines, then we will try to implement an MPI or GPU version. 
+
+We plan to test the code on the following benchmark problems: (1) distribute $N$ markers in the 3D periodic domain and compute the time necessary to spread, fluid solve, and interpolate as a function of the number of cores and the grid size. This serves as the ideal test because the particles will be distributed uniformly and we can gain more from the parallelization. (2) Distribute $M$ \textit{fibers} (1D strings of markers) in the domain and time the same computaions as a function of number of cores and grid size. This time, the structures will be localized, and it is hard  to parallelize spreading to the grid if the markers are right next to each other. This should be more illustrative of how our code will perform in a real simulation. 
+
+\section{MPI parallel 2D Jacobi}
+I have implemented the MPI parallel 2D Jacobi smoother assuming the number of cores is $4^j$ and the number of unknowns in each direction is $N_\ell 2^j$. I am fixing 100 iterations. For the weak scaling study, I am fixing $N_\ell = 100$. For the strong scaling study, I am fixing $N=10000$. I am running this code on prince. 
+
+Fig.\ \ref{fig:wk} shows the results of the weak scaling study. In the ideal problem, increasing the problem size proportional to the number of cores should not increase the compute time. Instead, for 2D Jacobi, we see approximately linear growth in the log of the number of cores (i.e. linear growth in $j$) of the compute time. 
+
+The results of the strong scaling study are shown in Fig.\ \ref{fig:strng}. In this case, we fix the number of unknowns at $10^8$ and increase the number of cores by a factor of 4. As the number of cores increases from 1 to 4, then 4 to 16, and finally 16 to 64, the average decrease in the compute time is a factor of 2.89. This is lower than the ``ideal'' value of 4. However, it is still a significant speed-up!
+
+\begin{figure}
+\centering 
+\subfigure[Weak scaling]{
+\label{fig:wk}
+\includegraphics[width=70mm]{WeakScale.eps}}
+\subfigure[Strong scaling]{
+\label{fig:strng}
+\includegraphics[width=70mm]{StrongScale.eps}}
+\caption{Scalings for 2D MPI Jacobi. (a) Weak scaling test. Fixing $N_{\ell}=100$, each processor takes $N_\ell^2$ values. Ideally, the run time would therefore be constant (dashed red line). Instead, we see approximately linear growth in the compute time with the log of the problem size, $N=2^j N_\ell$, where the number of cores, $p=4^j$ (blue circles). (b) Strong scaling test with a fixed problem size $N=10^4$ (total number of unknowns $=N^2=10^8$). Ideally, the time should decrease proportional to the number of cores. While we still see decay up to 64 cores, it is at a slower rate (average rate 2.9).  } 
+\end{figure}
+
+\section{Parallel sample sort}
+I have implemented the MPI version of parallel sample sort. As described in the homework, each of the $p$ processors creates $N$ random integers. These arrays are sorted locally using \texttt{std::sort}. Then, each processor picks $p-1$ local ``splitters'' and communicates those splitters to process $p=0$. The first process then sorts the splitters and chooses $p-1$ of them as global splitters, which are broadcast to all of the processes. Following this, the program uses a combination of \texttt{std::lower\_bound} (to determine how the sorted local arrays should be cut up), \texttt{MPI\_Alltoall} (to determine how many numbers each processor receives), and \texttt{MPI\_Alltoallv} (to send the segmented local arrays to the correct processor) to redistribute the vectors so that they are in buckets by processor. Each processor then sorts through its bucket. Finally, each process writes its sorted array to a file called \texttt{FromRank\_X.txt}, where \texttt{X} is the processor rank. 
+
+I have run the code on 64 cores of prince for $N=10^4, 10^5, 10^6$. Timings (excluding time to initialize arrays and time to write files) are reported in Table \ref{tab:sort}. We see that the time to sort is more or less constant in the range of $N$ studied. 
+\begin{table}
+\centering
+\begin{tabular}{c|c} 
+$N$ & Compute time \\
+\hline
+$10^4$ & 0.86\\
+$10^5$ & 0.77\\
+$10^6$ & 0.77
+\end{tabular}
+\caption{Compute times for sample sort vs. $N$ on 64 cores of prince. }
+\label{tab:sort}
+\end{table}
+
+\end{document}
